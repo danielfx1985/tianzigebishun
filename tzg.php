@@ -16,8 +16,21 @@ $f_color=$_POST['fcolor']??'5';//辅字体颜色
 $title=$_POST['title']??'';//辅字体颜色
 $bs=$_POST['bs']??'0';//笔顺填充
 $py=$_POST['py']??'0';//拼音
-$cols=max(5, min(20, intval($_POST['cols']??12)));//每行列数
+$show_strokes=intval($_POST['show_strokes']??1);//是否显示笔顺
+$cols=max(5, min(30, intval($_POST['cols']??12)));//每行列数
 $rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
+
+// 根据列数等比缩放格子和SVG（基准：12列时格子80px，SVG 54px）
+$page_width = 938;
+$cell = floor($page_width / $cols);
+$svg_dim = round($cell * 54 / 80);
+$scale_x = round(0.058 * $svg_dim / 54 * 10000) / 10000;
+$scale_y = round(0.0572 * $svg_dim / 54 * 10000) / 10000;
+$translate_y = round(48 * $svg_dim / 54);
+$margin_top_svg = round(-11 * $svg_dim / 54);
+$font_size_li = round(58 * $cell / 80);
+$line_height_li = round(85 * $cell / 80);
+$py_font_size = max(8, round(13 * $cell / 80));
 
 /*过滤掉非中文*/
 preg_match_all('/[\x{4e00}-\x{9fff}]+/u', $words, $words);
@@ -77,12 +90,11 @@ if($f_color=='10'){
 <title>田字格字帖生成器</title>
 <style>
 body,div,p,ul,li{ padding:0; margin:0; list-style:none;}
-div{ width:<?=($cols*78+2)?>px; margin:0 auto;padding-left:2px; }
-li{display: inline-block; width:80px; height:80px; font-family:"楷体","楷体_gb2312", "Kaiti SC", STKaiti, "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL UKai TW MBE", "AR PL KaitiM GB", KaiTi, KaiTi_GB2312, DFKai-SB, "TW\-Kai"; font-size:58px; text-align:center; line-height:85px; background:url(img/<?=$bglx;?>.svg); margin:5px 0px 5px -2px; color:#b8b8b8; }
-li.f{color:#000;margin-left:-0px}
-li.svg{line-height:84px;}
-li svg{ magin:8px; vertical-align:middle;}
-.afterpage{ page-break-before:always;}
+div{ width:<?=$cell*$cols?>px; margin:0 auto; }
+li{display: inline-block; width:<?=$cell?>px; height:<?=$cell?>px; font-family:"楷体","楷体_gb2312", "Kaiti SC", STKaiti, "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL UKai TW MBE", "AR PL KaitiM GB", KaiTi, KaiTi_GB2312, DFKai-SB, "TW\-Kai"; font-size:<?=$font_size_li?>px; text-align:center; line-height:<?=$line_height_li?>px; background:url(img/<?=$bglx;?>.svg); background-size:100% 100%; margin:0; color:#b8b8b8; }
+li.f{color:#000;}
+li.svg{line-height:<?=$cell?>px;}
+li svg{ vertical-align:middle;}
 .afterpage{ page-break-before:always;}
 .page-head{height: 116px;line-height: 136px; font-size: 32px;text-align: center;display: none;color: #666666}
 @media print{.afterpage{ page-break-before:always;}.page-head{display: block;}}
@@ -94,13 +106,15 @@ li svg{ magin:8px; vertical-align:middle;}
 <ul>
 <?php
 
-
-
 preg_match_all("/./u",$words,$hz);
+
+// SVG 公共开始标签
+$svg_open = '<svg width="'.$svg_dim.'" height="'.$svg_dim.'" style="margin-top:'.$margin_top_svg.'px;"><g transform="translate(-2.9,'.$translate_y.') scale('.$scale_x.', -'.$scale_y.')">';
+$svg_close = '</g></svg>';
 
 for($ihz=0;$ihz<count($hz['0']);$ihz++){
 
-	$hzGBK=iconv('UTF-8', 'GB2312' ,$hz['0'][$ihz]); 
+	$hzGBK=iconv('UTF-8', 'GB2312' ,$hz['0'][$ihz]);
 
 	if(file_exists("bishun_data/".$hzGBK.".json")){
 		$data=file_get_contents("bishun_data/".$hzGBK.".json");
@@ -113,75 +127,61 @@ for($ihz=0;$ihz<count($hz['0']);$ihz++){
 
 
 	/*显示完整字符和拼音*/
-	
 	if($py)
 	{
-		//print_r($hz['0'][$ihz]);
 		$py_str=Pinyin::getPinyin($hz['0'][$ihz]);
-		echo '<li class="svg" style="positon: relative;"><span style="font:13px bolder;display:block;position:absolute;width:80px;color:rgb('.$color.')">'.$py_str.'</span><svg width="54" height="54" style="margin-top: -11px;"><g transform="translate(-2.9,48) scale(0.058, -0.0572)">';
+		echo '<li class="svg" style="position:relative;"><span style="font-size:'.$py_font_size.'px;font-weight:bolder;display:block;position:absolute;width:'.$cell.'px;color:rgb('.$color.')">'.$py_str.'</span>'.$svg_open;
 	}
 	else
 	{
-		echo '<li class="svg"><svg width="54" height="54" style="margin-top: -11px;"><g transform="translate(-2.9,48) scale(0.058, -0.0572)">';
-	}
-	
-	foreach ($data['strokes'] as $v){
-		echo '<path d="'.$v.'"style="fill:rgb('.$color.');stroke:rgb('.$color.');" stroke-width = "0"></path>';
+		echo '<li class="svg">'.$svg_open;
 	}
 
-	echo "</g></svg></li>";
+	foreach ($data['strokes'] as $v){
+		echo '<path d="'.$v.'" style="fill:rgb('.$color.');stroke:rgb('.$color.');" stroke-width="0"></path>';
+	}
+
+	echo $svg_close.'</li>';
 
 
 	//按笔数显示
-	for($i=0;$i<$count;$i++){
-		
-		echo '<li class="svg"><svg width="54" height="54" style="margin-top: -11px;"><g transform="translate(-2.9,48) scale(0.058, -0.0572)">';
-		
-		for($ii=0;$ii<=$i;$ii++){
-			echo '<path d="'.$data['strokes'][$ii].'"style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width = "0"></path>';
+	if($show_strokes){
+		for($i=0;$i<$count;$i++){
+
+			echo '<li class="svg">'.$svg_open;
+
+			for($ii=0;$ii<=$i;$ii++){
+				echo '<path d="'.$data['strokes'][$ii].'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
+			}
+
+			echo $svg_close.'</li>';
+
 		}
-		
+	}
 
-		echo '</g></svg></li>';
+	/*计算当前字剩余空格（补齐到整行）*/
+	$total_cells = $show_strokes ? $count + 1 : 1;
+	$used = $total_cells % $cols;
+	$kg = $used == 0 ? 0 : $cols - $used;
 
-	}
-	
-	
-	/*判断是否填充12个田字格*/
-	$tzg12=($count+1)/$cols;
-	$kg=0;//空格，每行剩余未填充的空格
-	if(!is_int($tzg12)){
-		$kg=12- (12* $tzg12);
-	}
-	//为负数
-	if($kg<0){
-		$kg= ((ceil(abs($kg)/$cols)+1)*$cols)-($count+1);
-	}
-	
 	/*行数不够，填充*/
-	//填充完整字符
 	if($kg and $bs){
 		for($i=0;$i<$kg;$i++){
-			/*显示完整字符*/
-		 echo '<li class="svg"><svg width="54" height="54" style="margin-top: -11px;"><g transform="translate(-2.9,48) scale(0.058, -0.0572)">';
-	
-	     foreach ($data['strokes'] as $v){
-		    echo '<path d="'.$v.'"style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width = "0"></path>';
-	     }
-		 echo "</g></svg></li>";
-
+			echo '<li class="svg">'.$svg_open;
+			foreach ($data['strokes'] as $v){
+				echo '<path d="'.$v.'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
+			}
+			echo $svg_close.'</li>';
 		}
 	}
-	//填充空行
 	if($kg and !$bs){
 		for($i=0;$i<$kg;$i++){
 			echo '<li class="svg">&nbsp;</li>';
 		}
-		
 	}
 
 	/*分页显示标题头部*/
-	
+	$tzg12 = $show_strokes ? ($count+1)/$cols : 1/$cols;
 	$tzg_hs[]= ceil($tzg12);//占用行数
 	$arraytzg=intval(array_sum($tzg_hs));
 	$arraytzg=$arraytzg/$rows;
