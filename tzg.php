@@ -119,7 +119,7 @@ $svg_close = '</g></svg>';
 
 // 查找字符对应的笔顺数据文件，找不到返回 null
 function find_bishun($hz_char) {
-	$hzGBK = iconv('UTF-8', 'GB2312', $hz_char);
+	$hzGBK = iconv('UTF-8', 'GB2312//IGNORE', $hz_char);
 	if($hzGBK && file_exists("bishun_data/".$hzGBK.".json")) return "bishun_data/".$hzGBK.".json";
 	if(file_exists("bishun_data/".$hz_char.".json")) return "bishun_data/".$hz_char.".json";
 	return null;
