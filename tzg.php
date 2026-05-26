@@ -16,6 +16,8 @@ $f_color=$_POST['fcolor']??'5';//辅字体颜色
 $title=$_POST['title']??'';//辅字体颜色
 $bs=$_POST['bs']??'0';//笔顺填充
 $py=$_POST['py']??'0';//拼音
+$cols=max(5, min(20, intval($_POST['cols']??12)));//每行列数
+$rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
 
 /*过滤掉非中文*/
 preg_match_all('/[\x{4e00}-\x{9fff}]+/u', $words, $words);
@@ -75,7 +77,7 @@ if($f_color=='10'){
 <title>田字格字帖生成器</title>
 <style>
 body,div,p,ul,li{ padding:0; margin:0; list-style:none;}
-div{ width:938px; margin:0 auto;padding-left:2px; }
+div{ width:<?=($cols*78+2)?>px; margin:0 auto;padding-left:2px; }
 li{display: inline-block; width:80px; height:80px; font-family:"楷体","楷体_gb2312", "Kaiti SC", STKaiti, "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL UKai TW MBE", "AR PL KaitiM GB", KaiTi, KaiTi_GB2312, DFKai-SB, "TW\-Kai"; font-size:58px; text-align:center; line-height:85px; background:url(img/<?=$bglx;?>.svg); margin:5px 0px 5px -2px; color:#b8b8b8; }
 li.f{color:#000;margin-left:-0px}
 li.svg{line-height:84px;}
@@ -146,14 +148,14 @@ for($ihz=0;$ihz<count($hz['0']);$ihz++){
 	
 	
 	/*判断是否填充12个田字格*/
-	$tzg12=($count+1)/12;
+	$tzg12=($count+1)/$cols;
 	$kg=0;//空格，每行剩余未填充的空格
 	if(!is_int($tzg12)){
 		$kg=12- (12* $tzg12);
 	}
 	//为负数
 	if($kg<0){
-		$kg= ((ceil(abs($kg)/12)+1)*12)-($count+1);
+		$kg= ((ceil(abs($kg)/$cols)+1)*$cols)-($count+1);
 	}
 	
 	/*行数不够，填充*/
@@ -182,7 +184,7 @@ for($ihz=0;$ihz<count($hz['0']);$ihz++){
 	
 	$tzg_hs[]= ceil($tzg12);//占用行数
 	$arraytzg=intval(array_sum($tzg_hs));
-	$arraytzg=$arraytzg/15;
+	$arraytzg=$arraytzg/$rows;
 	if(is_int($arraytzg)){
 		echo "</ul></div><div class='afterpage'><ul>";
 	}
@@ -191,8 +193,8 @@ for($ihz=0;$ihz<count($hz['0']);$ihz++){
 
 //堆满整页
 $tzg_hs=array_sum($tzg_hs);//田字格使用行数
-$tzgzys=ceil($tzg_hs/15);//田字格总页数
-$zhengye=($tzgzys*15-$tzg_hs)*12;
+$tzgzys=ceil($tzg_hs/$rows);//田字格总页数
+$zhengye=($tzgzys*$rows-$tzg_hs)*$cols;
 
 	for($i=0;$i<$zhengye;$i++){
 		echo "<li>&nbsp;</li>";
