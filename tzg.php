@@ -96,7 +96,7 @@ if($f_color=='10'){
 <style>
 body,div,p,ul,li{ padding:0; margin:0; list-style:none;}
 div{ width:<?=$cell*$cols?>px; margin:0 auto; }
-li{display: inline-block; width:<?=$cell?>px; height:<?=$cell?>px; font-family:<?=$font ? '"'.addslashes($font).'", ' : ''?>"楷体","楷体_gb2312", "Kaiti SC", STKaiti, "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL UKai TW MBE", "AR PL KaitiM GB", KaiTi, KaiTi_GB2312, DFKai-SB, "TW\-Kai"; font-size:<?=$font_size_li?>px; text-align:center; line-height:<?=$line_height_li?>px; background:url(img/<?=$bglx;?>.svg); background-size:100% 100%; margin:0; color:#b8b8b8; }
+li{display: inline-block; vertical-align: top; width:<?=$cell?>px; height:<?=$cell?>px; font-family:<?=$font ? '"'.addslashes($font).'", ' : ''?>"楷体","楷体_gb2312", "Kaiti SC", STKaiti, "AR PL UKai CN", "AR PL UKai HK", "AR PL UKai TW", "AR PL UKai TW MBE", "AR PL KaitiM GB", KaiTi, KaiTi_GB2312, DFKai-SB, "TW\-Kai"; font-size:<?=$font_size_li?>px; text-align:center; line-height:<?=$line_height_li?>px; background:url(img/<?=$bglx;?>.svg); background-size:100% 100%; margin:0; color:#b8b8b8; }
 li.f{color:#000;}
 li.svg{line-height:<?=$cell?>px;}
 li svg{ vertical-align:middle;}
