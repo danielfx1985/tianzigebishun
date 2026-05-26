@@ -79,17 +79,35 @@ div.top h1{ font-size:32px; font-weight:bold;}
 <input type="radio" name="show_strokes" value="1" checked><span>是</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <input type="radio" name="show_strokes" value="0"><span>否（直接显示所有汉字）</span></div>
 <div id="bsfill" style="">笔顺剩余填充：
-<input type="radio" name="bs" value="1"><span>是</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="radio" name="bs" value="0" checked="">否</div>
+<input type="radio" name="bs" value="1" checked><span>是</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input type="radio" name="bs" value="0" id="bs_no">否</div>
 <div id="pyfill" style="">显示拼音：
 <input type="radio" name="py" value="1"><span>是</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <input type="radio" name="py" value="0" checked="">否</div>
 
-<div>每行列数：<input type="number" name="cols" value="12" min="5" max="20" class="input" style="width:60px">&nbsp;&nbsp;&nbsp;&nbsp;每页行数：<input type="number" name="rows" value="15" min="5" max="30" class="input" style="width:60px"></div>
+<div>每行列数：<input type="number" name="cols" value="12" min="5" max="30" class="input" style="width:60px">&nbsp;&nbsp;&nbsp;&nbsp;每页行数：<input type="number" name="rows" value="15" min="5" max="30" class="input" style="width:60px"></div>
+<div>自定义字体：<input type="text" name="font" value="" placeholder="留空使用默认（如：楷体、华文行楷、隶书）" class="input"></div>
 <div>自定义页头：<input type="text" name="title" value="田字格字帖生成器" class="input"></div>
 
 <div class="btn"><input type="submit" value="生成" ></div>
 </form>
+
+<script>
+document.querySelectorAll('input[name="show_strokes"]').forEach(function(el){
+  el.addEventListener('change', function(){
+    if(this.value === '0'){
+      document.querySelector('input[name="bs"][value="1"]').checked = true;
+    }
+  });
+});
+document.querySelectorAll('input[name="layout"]').forEach(function(el){
+  el.addEventListener('change', function(){
+    if(this.value === 'flow'){
+      document.querySelector('input[name="show_strokes"][value="0"]').checked = true;
+    }
+  });
+});
+</script>
 
 <div class="info">
 <strong>注意：</strong>请认真阅读以下内容<p>
