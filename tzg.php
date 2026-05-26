@@ -17,6 +17,7 @@ $title=$_POST['title']??'';//辅字体颜色
 $bs=$_POST['bs']??'0';//笔顺填充
 $py=$_POST['py']??'0';//拼音
 $show_strokes=intval($_POST['show_strokes']??1);//是否显示笔顺
+$layout=$_POST['layout']??'single';//排列方式：single=按字分行，flow=连续排列
 $cols=max(5, min(30, intval($_POST['cols']??12)));//每行列数
 $rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
 
@@ -112,93 +113,134 @@ preg_match_all("/./u",$words,$hz);
 $svg_open = '<svg width="'.$svg_dim.'" height="'.$svg_dim.'" style="margin-top:'.$margin_top_svg.'px;"><g transform="translate(-2.9,'.$translate_y.') scale('.$scale_x.', -'.$scale_y.')">';
 $svg_close = '</g></svg>';
 
-for($ihz=0;$ihz<count($hz['0']);$ihz++){
-
-	$hzGBK=iconv('UTF-8', 'GB2312' ,$hz['0'][$ihz]);
-
-	if(file_exists("bishun_data/".$hzGBK.".json")){
-		$data=file_get_contents("bishun_data/".$hzGBK.".json");
-	}else{
-		$data=file_get_contents("bishun_data/".$hz['0'][$ihz].".json");
+// 输出完整字符 li（含可选拼音）
+function render_char_cell($hz_char, $data, $color, $py, $py_font_size, $cell, $svg_open, $svg_close) {
+	global $Pinyin;
+	if($py) {
+		$py_str = Pinyin::getPinyin($hz_char);
+		$li = '<li class="svg" style="position:relative;"><span style="font-size:'.$py_font_size.'px;font-weight:bolder;display:block;position:absolute;width:'.$cell.'px;color:rgb('.$color.')">'.$py_str.'</span>'.$svg_open;
+	} else {
+		$li = '<li class="svg">'.$svg_open;
 	}
-
-	$data=json_decode($data,1);
-	$count=count($data['strokes']);//统计共有多少画
-
-
-	/*显示完整字符和拼音*/
-	if($py)
-	{
-		$py_str=Pinyin::getPinyin($hz['0'][$ihz]);
-		echo '<li class="svg" style="position:relative;"><span style="font-size:'.$py_font_size.'px;font-weight:bolder;display:block;position:absolute;width:'.$cell.'px;color:rgb('.$color.')">'.$py_str.'</span>'.$svg_open;
+	foreach ($data['strokes'] as $v) {
+		$li .= '<path d="'.$v.'" style="fill:rgb('.$color.');stroke:rgb('.$color.');" stroke-width="0"></path>';
 	}
-	else
-	{
-		echo '<li class="svg">'.$svg_open;
-	}
-
-	foreach ($data['strokes'] as $v){
-		echo '<path d="'.$v.'" style="fill:rgb('.$color.');stroke:rgb('.$color.');" stroke-width="0"></path>';
-	}
-
-	echo $svg_close.'</li>';
-
-
-	//按笔数显示
-	if($show_strokes){
-		for($i=0;$i<$count;$i++){
-
-			echo '<li class="svg">'.$svg_open;
-
-			for($ii=0;$ii<=$i;$ii++){
-				echo '<path d="'.$data['strokes'][$ii].'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
-			}
-
-			echo $svg_close.'</li>';
-
-		}
-	}
-
-	/*计算当前字剩余空格（补齐到整行）*/
-	$total_cells = $show_strokes ? $count + 1 : 1;
-	$used = $total_cells % $cols;
-	$kg = $used == 0 ? 0 : $cols - $used;
-
-	/*行数不够，填充*/
-	if($kg and $bs){
-		for($i=0;$i<$kg;$i++){
-			echo '<li class="svg">'.$svg_open;
-			foreach ($data['strokes'] as $v){
-				echo '<path d="'.$v.'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
-			}
-			echo $svg_close.'</li>';
-		}
-	}
-	if($kg and !$bs){
-		for($i=0;$i<$kg;$i++){
-			echo '<li class="svg">&nbsp;</li>';
-		}
-	}
-
-	/*分页显示标题头部*/
-	$tzg12 = $show_strokes ? ($count+1)/$cols : 1/$cols;
-	$tzg_hs[]= ceil($tzg12);//占用行数
-	$arraytzg=intval(array_sum($tzg_hs));
-	$arraytzg=$arraytzg/$rows;
-	if(is_int($arraytzg)){
-		echo "</ul></div><div class='afterpage'><ul>";
-	}
-
+	$li .= $svg_close.'</li>';
+	return $li;
 }
 
-//堆满整页
-$tzg_hs=array_sum($tzg_hs);//田字格使用行数
-$tzgzys=ceil($tzg_hs/$rows);//田字格总页数
-$zhengye=($tzgzys*$rows-$tzg_hs)*$cols;
+// 输出笔顺步骤 li
+function render_stroke_cell($data, $step, $fcolor, $svg_open, $svg_close) {
+	$li = '<li class="svg">'.$svg_open;
+	for($ii=0;$ii<=$step;$ii++) {
+		$li .= '<path d="'.$data['strokes'][$ii].'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
+	}
+	$li .= $svg_close.'</li>';
+	return $li;
+}
+
+if($layout === 'flow') {
+	// 连续排列：所有格子顺序流动，按总格数分页
+	$cells_per_page = $rows * $cols;
+	$rendered = 0;
+
+	$emit = function($li) use (&$rendered, $cells_per_page) {
+		echo $li;
+		$rendered++;
+		if($rendered % $cells_per_page === 0) {
+			echo "</ul></div><div class='afterpage'><ul>";
+		}
+	};
+
+	for($ihz=0; $ihz<count($hz['0']); $ihz++) {
+		$hzGBK = iconv('UTF-8', 'GB2312', $hz['0'][$ihz]);
+		if(file_exists("bishun_data/".$hzGBK.".json")) {
+			$data = file_get_contents("bishun_data/".$hzGBK.".json");
+		} else {
+			$data = file_get_contents("bishun_data/".$hz['0'][$ihz].".json");
+		}
+		$data = json_decode($data, 1);
+		$count = count($data['strokes']);
+
+		$emit(render_char_cell($hz['0'][$ihz], $data, $color, $py, $py_font_size, $cell, $svg_open, $svg_close));
+
+		if($show_strokes) {
+			for($i=0; $i<$count; $i++) {
+				$emit(render_stroke_cell($data, $i, $fcolor, $svg_open, $svg_close));
+			}
+		}
+	}
+
+	// 补满最后一页
+	$remaining = ($cells_per_page - $rendered % $cells_per_page) % $cells_per_page;
+	for($i=0; $i<$remaining; $i++) {
+		echo '<li class="svg">&nbsp;</li>';
+	}
+
+} else {
+	// 按字分行：每字独立占行，与原有逻辑一致
+	for($ihz=0;$ihz<count($hz['0']);$ihz++){
+
+		$hzGBK=iconv('UTF-8', 'GB2312' ,$hz['0'][$ihz]);
+
+		if(file_exists("bishun_data/".$hzGBK.".json")){
+			$data=file_get_contents("bishun_data/".$hzGBK.".json");
+		}else{
+			$data=file_get_contents("bishun_data/".$hz['0'][$ihz].".json");
+		}
+
+		$data=json_decode($data,1);
+		$count=count($data['strokes']);
+
+		echo render_char_cell($hz['0'][$ihz], $data, $color, $py, $py_font_size, $cell, $svg_open, $svg_close);
+
+		if($show_strokes){
+			for($i=0;$i<$count;$i++){
+				echo render_stroke_cell($data, $i, $fcolor, $svg_open, $svg_close);
+			}
+		}
+
+		/*计算当前字剩余空格（补齐到整行）*/
+		$total_cells = $show_strokes ? $count + 1 : 1;
+		$used = $total_cells % $cols;
+		$kg = $used == 0 ? 0 : $cols - $used;
+
+		/*行数不够，填充*/
+		if($kg and $bs){
+			for($i=0;$i<$kg;$i++){
+				echo '<li class="svg">'.$svg_open;
+				foreach ($data['strokes'] as $v){
+					echo '<path d="'.$v.'" style="fill:rgb('.$fcolor.');stroke:rgb('.$fcolor.');" stroke-width="0"></path>';
+				}
+				echo $svg_close.'</li>';
+			}
+		}
+		if($kg and !$bs){
+			for($i=0;$i<$kg;$i++){
+				echo '<li class="svg">&nbsp;</li>';
+			}
+		}
+
+		/*分页显示标题头部*/
+		$tzg12 = $show_strokes ? ($count+1)/$cols : 1/$cols;
+		$tzg_hs[]= ceil($tzg12);
+		$arraytzg=intval(array_sum($tzg_hs));
+		$arraytzg=$arraytzg/$rows;
+		if(is_int($arraytzg)){
+			echo "</ul></div><div class='afterpage'><ul>";
+		}
+
+	}
+
+	//堆满整页
+	$tzg_hs=array_sum($tzg_hs);
+	$tzgzys=ceil($tzg_hs/$rows);
+	$zhengye=($tzgzys*$rows-$tzg_hs)*$cols;
 
 	for($i=0;$i<$zhengye;$i++){
 		echo "<li>&nbsp;</li>";
 	}
+}
 
 ?>
 </ul>
