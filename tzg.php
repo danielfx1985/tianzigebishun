@@ -20,7 +20,7 @@ $show_strokes=intval($_POST['show_strokes']??1);//是否显示笔顺
 $layout=$_POST['layout']??'single';//排列方式：single=按字分行，flow=连续排列
 // 连续排列不支持笔顺展开（笔顺格会把参考字淹没在大量浅色格中）
 if($layout === 'flow') $show_strokes = 0;
-$cols=max(5, min(30, intval($_POST['cols']??12)));//每行列数
+$cols=max(1, min(30, intval($_POST['cols']??12)));//每行列数
 $rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
 $font=preg_replace('/["\'\<\>\{\}\\\\]/', '', trim($_POST['font']??''));//自定义字体
 
