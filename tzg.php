@@ -17,12 +17,13 @@ $title=$_POST['title']??'';//辅字体颜色
 $bs=$_POST['bs']??'0';//笔顺填充
 $py=$_POST['py']??'0';//拼音
 $show_strokes=intval($_POST['show_strokes']??1);//是否显示笔顺
-$layout=$_POST['layout']??'single';//排列方式：single=按字分行，flow=连续排列
-// 连续排列不支持笔顺展开（笔顺格会把参考字淹没在大量浅色格中）
-if($layout === 'flow') $show_strokes = 0;
+$layout=$_POST['layout']??'flow';//排列方式：single=按字分行，flow=连续排列，example=首字示范
+// 连续排列、首字示范不支持笔顺展开
+if($layout === 'flow' || $layout === 'example') $show_strokes = 0;
 $cols=max(1, min(30, intval($_POST['cols']??12)));//每行列数
 $rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
 $font=preg_replace('/["\'\<\>\{\}\\\\]/', '', trim($_POST['font']??''));//自定义字体
+$strip_punct = isset($_POST['strip_punct']) ? 1 : 0;//自动去除标点，默认开启（表单勾选时提交）
 
 // 根据列数等比缩放格子和SVG（基准：12列时格子80px，SVG 54px）
 $page_width = 938;
@@ -36,9 +37,13 @@ $font_size_li = round(58 * $cell / 80);
 $line_height_li = round(85 * $cell / 80);
 $py_font_size = max(8, round(13 * $cell / 80));
 
-/*过滤掉空白换行，保留汉字和常用中文标点*/
+/*过滤掉空白换行*/
 $words = preg_replace('/\s+/u', '', $words);
-preg_match_all("/[\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}\x{3000}-\x{303f}\x{ff00}-\x{ffef}\x{201c}\x{201d}\x{2018}\x{2019}\x{3001}\x{2026}\x{2014}\x{ff5e}\x{3010}\x{3011}\x{300a}\x{300b}\x{ff08}\x{ff09}]/u", $words, $matches);
+if($strip_punct) {
+	preg_match_all("/[\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}]/u", $words, $matches);
+} else {
+	preg_match_all("/[\x{4e00}-\x{9fff}\x{3400}-\x{4dbf}\x{3000}-\x{303f}\x{ff00}-\x{ffef}\x{201c}\x{201d}\x{2018}\x{2019}\x{3001}\x{2026}\x{2014}\x{ff5e}\x{3010}\x{3011}\x{300a}\x{300b}\x{ff08}\x{ff09}]/u", $words, $matches);
+}
 $words = implode('', $matches[0]);
 
 
@@ -209,6 +214,41 @@ if($layout === 'flow') {
 	$remaining = ($cells_per_page - $rendered % $cells_per_page) % $cells_per_page;
 	for($i=0; $i<$remaining; $i++) {
 		echo '<li class="svg">&nbsp;</li>';
+	}
+
+} elseif($layout === 'example') {
+	// 首字示范：每字一行，首格完整示例，其余空白格
+	for($ihz=0; $ihz<count($hz['0']); $ihz++){
+		$hz_char = $hz['0'][$ihz];
+
+		if($font) {
+			echo render_char_cell_font($hz_char, $color, $py, $py_font_size, $cell);
+		} else {
+			$data_file = find_bishun($hz_char);
+			if(!$data_file) {
+				echo render_text_cell($hz_char, $cell);
+			} else {
+				$data = json_decode(file_get_contents($data_file), 1);
+				echo render_char_cell($hz_char, $data, $color, $py, $py_font_size, $cell, $svg_open, $svg_close);
+			}
+		}
+
+		for($i=1; $i<$cols; $i++) {
+			echo '<li class="svg">&nbsp;</li>';
+		}
+
+		$tzg_hs[] = 1;
+		$arraytzg = intval(array_sum($tzg_hs)) / $rows;
+		if(is_int($arraytzg)) {
+			echo "</ul></div><div class='afterpage'><ul>";
+		}
+	}
+
+	$tzg_hs = array_sum($tzg_hs);
+	$tzgzys = ceil($tzg_hs / $rows);
+	$zhengye = ($tzgzys * $rows - $tzg_hs) * $cols;
+	for($i=0; $i<$zhengye; $i++){
+		echo "<li>&nbsp;</li>";
 	}
 
 } else {
