@@ -76,7 +76,8 @@ div.top h1{ font-size:32px; font-weight:bold;}
 <div>排列方式：
 <input type="radio" name="layout" value="single"><span>按字分行（每字单独占行）</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <input type="radio" name="layout" value="flow" checked><span>连续排列（按内容顺序填格）</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<input type="radio" name="layout" value="example"><span>首字示范（首格示例，其余空白）</span></div>
+<input type="radio" name="layout" value="example"><span>首字示范（首格示例，其余空白）</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input type="radio" name="layout" value="trace_write"><span>一描一写（一个描字一个空白）</span></div>
 <div>显示笔顺：
 <input type="radio" name="show_strokes" value="1" checked><span>是</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <input type="radio" name="show_strokes" value="0"><span>否（直接显示所有汉字）</span></div>
@@ -104,7 +105,7 @@ document.querySelectorAll('input[name="show_strokes"]').forEach(function(el){
 });
 document.querySelectorAll('input[name="layout"]').forEach(function(el){
   el.addEventListener('change', function(){
-    if(this.value === 'flow' || this.value === 'example'){
+    if(this.value === 'flow' || this.value === 'example' || this.value === 'trace_write'){
       document.querySelector('input[name="show_strokes"][value="0"]').checked = true;
     }
   });

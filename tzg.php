@@ -17,9 +17,9 @@ $title=$_POST['title']??'';//辅字体颜色
 $bs=$_POST['bs']??'0';//笔顺填充
 $py=$_POST['py']??'0';//拼音
 $show_strokes=intval($_POST['show_strokes']??1);//是否显示笔顺
-$layout=$_POST['layout']??'flow';//排列方式：single=按字分行，flow=连续排列，example=首字示范
-// 连续排列、首字示范不支持笔顺展开
-if($layout === 'flow' || $layout === 'example') $show_strokes = 0;
+$layout=$_POST['layout']??'flow';//排列方式：single=按字分行，flow=连续排列，example=首字示范，trace_write=一描一写
+// 连续排列、首字示范、一描一写不支持笔顺展开
+if($layout === 'flow' || $layout === 'example' || $layout === 'trace_write') $show_strokes = 0;
 $cols=max(1, min(30, intval($_POST['cols']??12)));//每行列数
 $rows=max(5, min(30, intval($_POST['rows']??15)));//每页行数
 $font=preg_replace('/["\'\<\>\{\}\\\\]/', '', trim($_POST['font']??''));//自定义字体
@@ -211,6 +211,42 @@ if($layout === 'flow') {
 	}
 
 	// 补满最后一页
+	$remaining = ($cells_per_page - $rendered % $cells_per_page) % $cells_per_page;
+	for($i=0; $i<$remaining; $i++) {
+		echo '<li class="svg">&nbsp;</li>';
+	}
+
+} elseif($layout === 'trace_write') {
+	// 一描一写：每字一对格子（描红字 + 空白），流式填格分页
+	$cells_per_page = $rows * $cols;
+	$rendered = 0;
+
+	$emit = function($li) use (&$rendered, $cells_per_page) {
+		echo $li;
+		$rendered++;
+		if($rendered % $cells_per_page === 0) {
+			echo "</ul></div><div class='afterpage'><ul>";
+		}
+	};
+
+	for($ihz=0; $ihz<count($hz['0']); $ihz++) {
+		$hz_char = $hz['0'][$ihz];
+
+		if($font) {
+			$emit(render_char_cell_font($hz_char, $fcolor, $py, $py_font_size, $cell));
+		} else {
+			$data_file = find_bishun($hz_char);
+			if(!$data_file) {
+				$emit(render_text_cell($hz_char, $cell));
+			} else {
+				$data = json_decode(file_get_contents($data_file), 1);
+				$emit(render_char_cell($hz_char, $data, $fcolor, $py, $py_font_size, $cell, $svg_open, $svg_close));
+			}
+		}
+
+		$emit('<li class="svg">&nbsp;</li>');
+	}
+
 	$remaining = ($cells_per_page - $rendered % $cells_per_page) % $cells_per_page;
 	for($i=0; $i<$remaining; $i++) {
 		echo '<li class="svg">&nbsp;</li>';
